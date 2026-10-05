@@ -75,6 +75,8 @@ jobs:
           cmake --build build --parallel 4
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           ctest --test-dir build --output-on-failure
+      - name: Test GUI subscription HTTP requests
+        run: python tests/mihomo_subscription_windows.py --gui build/Throne.exe --core-dir deployment/windows-amd64
       - name: Package preview
         run: |
           Copy-Item build/Throne.exe deployment/windows-amd64/

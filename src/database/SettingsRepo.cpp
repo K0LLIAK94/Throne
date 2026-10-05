@@ -333,18 +333,11 @@ namespace Configs {
         Save();
     }
 
-    static QStringView SubStrBefore(QStringView str, QStringView sub) {
-        const qsizetype pos = str.indexOf(sub);
-        return pos == -1 ? str : str.left(pos);
-    }
-
     QString SettingsRepo::GetUserAgent(bool isDefault) const {
         if (user_agent.isEmpty() || isDefault) {
-            const QStringView version = SubStrBefore(QStringLiteral(NKR_VERSION), u"-");
-            if (version.contains(u'.')) {
-                return QStringLiteral("mihomo/1.19.32 Throne/") + version.toString();
-            }
-            return QStringLiteral("mihomo/1.19.32 Throne/1.0.0");
+            // Providers may match "Throne" before "mihomo" and return a limited
+            // link subscription. Advertise only the format supported by the importer.
+            return QStringLiteral("mihomo/1.19.32");
         }
         return user_agent;
     }

@@ -10,8 +10,9 @@ options such as XHTTP, VLESS encryption, Hysteria2 Gecko, ShadowQUIC and Sudoku.
 The profile table shows the protocol's name and server address. Existing native
 profiles continue to use their existing adapters.
 
-The default subscription user agent starts with `mihomo/1.19.32` so providers can
-return their full Mihomo configuration. Explicit global or group user agents
+The default subscription user agent is exactly `mihomo/1.19.32` so providers can
+return their full Mihomo configuration. Appending `Throne` can make providers
+select their limited native link format instead. Explicit global or group user agents
 still take precedence. Only individual proxy definitions are imported; remote
 subscription rules and proxy groups do not replace Throne routing rules.
 
@@ -39,6 +40,12 @@ go test -ldflags=-checklinkname=0 -tags 'with_clash_api,with_quic,with_wireguard
 Configure the GUI with `-DTHRONE_BUILD_TESTS=ON`, build it, and run `ctest`.
 `mihomo-import-test /path/to/private-subscription.json` additionally checks that
 every proxy object in a real JSON subscription survives wrapping unchanged.
+
+On Windows, run `python tests/mihomo_subscription_windows.py --gui build/Throne.exe
+--core-dir deployment/windows-amd64` to exercise real GUI HTTP subscription
+refreshes against a local provider. It checks the default User-Agent and explicit
+global/group overrides, and compares every imported proxy field. All databases
+and processes are isolated from the user's configuration.
 
 For opt-in live HTTPS and UDP checks, set `THRONE_MIHOMO_SUBSCRIPTION` to a
 private JSON subscription file outside the checkout and run

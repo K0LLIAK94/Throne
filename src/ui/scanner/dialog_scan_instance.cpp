@@ -956,6 +956,12 @@ void DialogScanInstance::reloadConfigProfiles(int selectId) {
     QSet<int> excluded;
     for (const auto &type : kScanInstanceCandidateExclusions) {
         if (Scanner::IsScanBaseType(type)) continue;
+        if (type == "custom") {
+            for (const auto &profile : profiles->GetProfileBatch(profiles->GetProfileIdsByType(type))) {
+                if (profile != nullptr && !Scanner::IsScanBaseProfile(*profile)) excluded.insert(profile->id);
+            }
+            continue;
+        }
         for (const int id : profiles->GetProfileIdsByType(type)) excluded.insert(id);
     }
 

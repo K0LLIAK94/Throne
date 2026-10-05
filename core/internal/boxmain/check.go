@@ -6,11 +6,14 @@ import (
 	"github.com/sagernet/sing-box/include"
 
 	"ThroneCore/internal/boxbox"
+	"ThroneCore/internal/mihomo"
 )
 
 func Check(content []byte) error {
 	ctx := context.Background()
-	ctx = boxbox.Context(ctx, include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry(), include.DNSTransportRegistry(), include.ServiceRegistry(), include.CertificateProviderRegistry())
+	outbounds := include.OutboundRegistry()
+	mihomo.Register(outbounds)
+	ctx = boxbox.Context(ctx, include.InboundRegistry(), outbounds, include.EndpointRegistry(), include.DNSTransportRegistry(), include.ServiceRegistry(), include.CertificateProviderRegistry())
 	options, err := parseConfig(ctx, content)
 	if err != nil {
 		return err

@@ -75,6 +75,13 @@ namespace Scanner {
                type != QLatin1String("tailscale") && type != QLatin1String("autoselector") && type != QLatin1String("direct");
     }
 
+    bool IsScanBaseProfile(const Configs::Profile &profile) {
+        if (profile.type == "custom") {
+            return profile.Custom() != nullptr && profile.Custom()->IsMihomo();
+        }
+        return IsScanBaseType(profile.type);
+    }
+
     QString WarpTransportOf(const QString &mode) {
         return mode == QLatin1String("masque") ? QStringLiteral("masque") : QStringLiteral("wireguard");
     }
@@ -87,7 +94,7 @@ namespace Scanner {
             scanProfilesSetError(error, QObject::tr("Choose a profile for the config test"));
             return nullptr;
         }
-        if (!IsScanBaseType(live->type)) {
+        if (!IsScanBaseProfile(*live)) {
             scanProfilesSetError(error, QObject::tr("This type of profile cannot be pointed at scanned addresses"));
             return nullptr;
         }

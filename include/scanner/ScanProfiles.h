@@ -10,6 +10,7 @@
 
 namespace Scanner {
     [[nodiscard]] bool IsScanBaseType(const QString &type);
+    [[nodiscard]] bool IsScanBaseProfile(const Configs::Profile &profile);
 
     // Always a deep copy, never the live repo object.
     std::shared_ptr<Configs::Profile> ResolveScanBase(const Configs::IpScan &scan, QString *error);

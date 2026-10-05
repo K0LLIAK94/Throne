@@ -15,6 +15,40 @@ namespace Configs
         QString config;
         QString type;
 
+        bool IsMihomo() const {
+            return type == CustomOutbound && QString2QJsonObject(config)["type"].toString() == "mihomo";
+        }
+
+        void SetAddress(QString address) override {
+            if (!IsMihomo()) { outbound::SetAddress(std::move(address)); return; }
+            auto object = QString2QJsonObject(config);
+            auto proxy = object["proxy"].toObject();
+            const auto original = proxy["server"].toString();
+            if (!original.isEmpty() && !IsIpAddress(original)) {
+                for (const auto *key : {"sni", "servername"}) {
+                    if (proxy[key].toString().isEmpty()) proxy[key] = original;
+                }
+            }
+            object["server"] = address;
+            proxy["server"] = address;
+            object["proxy"] = proxy;
+            config = QJsonObject2QString(object, false);
+        }
+
+        void SetPort(int port) override {
+            if (!IsMihomo()) { outbound::SetPort(port); return; }
+            auto object = QString2QJsonObject(config);
+            auto proxy = object["proxy"].toObject();
+            object["server_port"] = port;
+            proxy["port"] = port;
+            object["proxy"] = proxy;
+            config = QJsonObject2QString(object, false);
+        }
+
+        QString GetPort() override {
+            return IsMihomo() ? QString::number(QString2QJsonObject(config)["server_port"].toInt()) : outbound::GetPort();
+        }
+
         // Transient bridge fields: Build() emits a socks outbound on this port; Xray gets the matching inbound.
         int bridgePort = 0;
         QString bridgeAuth;
@@ -70,7 +104,22 @@ namespace Configs
         QString DisplayType() override
         {
             if (type == CustomOutbound) {
-                auto outboundType = QString2QJsonObject(config)["type"].toString();
+                const auto object = QString2QJsonObject(config);
+                auto outboundType = object["type"].toString();
+                if (outboundType == "mihomo") {
+                    outboundType = object["proxy"].toObject()["type"].toString();
+                    if (outboundType == "ss") return "Shadowsocks";
+                    if (outboundType == "ssr") return "ShadowsocksR";
+                    if (outboundType == "hysteria2") return "Hysteria";
+                    if (outboundType == "tuic") return "TUIC";
+                    if (outboundType == "vless") return "VLESS";
+                    if (outboundType == "vmess") return "VMess";
+                    if (outboundType == "anytls") return "AnyTLS";
+                    if (outboundType == "shadowquic") return "ShadowQUIC";
+                    if (outboundType == "trusttunnel") return "TrustTunnel";
+                    if (!outboundType.isEmpty()) outboundType[0] = outboundType[0].toUpper();
+                    return outboundType;
+                }
                 if (!outboundType.isEmpty()) outboundType[0] = outboundType[0].toUpper();
                 return outboundType.isEmpty() ? "Custom Outbound" : "Custom " + outboundType + " Outbound";
             } else if (type == CustomFullConfig) {

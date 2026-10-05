@@ -723,3 +723,12 @@ target_link_libraries(Throne PRIVATE
 )
 
 qt_finalize_executable(Throne)
+
+option(THRONE_BUILD_TESTS "Build subscription import checks" OFF)
+if (THRONE_BUILD_TESTS)
+    enable_testing()
+    add_executable(mihomo-import-test tests/mihomo_import.cpp)
+    target_include_directories(mihomo-import-test PRIVATE ${CMAKE_SOURCE_DIR})
+    target_link_libraries(mihomo-import-test PRIVATE Qt6::Core)
+    add_test(NAME mihomo-import COMMAND mihomo-import-test)
+endif ()

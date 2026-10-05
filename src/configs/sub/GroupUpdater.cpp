@@ -35,6 +35,19 @@ namespace Subscription {
         }
 
         QByteArray identityKeyOf(const Configs::Profile &ent) {
+            if (ent.type == "custom") {
+                const auto custom = std::dynamic_pointer_cast<Configs::Custom>(ent.outbound);
+                if (custom != nullptr && custom->type == Configs::Custom::CustomOutbound) {
+                    const auto object = QString2QJsonObject(custom->config);
+                    if (object["type"].toString() == "mihomo") {
+                        if (const auto legacy = LegacyMihomoProfile(object["proxy"].toObject())) {
+                            // Keep IDs used by routing rules when a previously
+                            // native Clash profile becomes a Mihomo outbound.
+                            return digest(legacy->type.toUtf8() + '|' + QJsonDocument(legacy->outbound->ExportIdentity()).toJson(QJsonDocument::Compact));
+                        }
+                    }
+                }
+            }
             return digest(ent.type.toUtf8() + '|' + QJsonDocument(ent.outbound->ExportIdentity()).toJson(QJsonDocument::Compact));
         }
 

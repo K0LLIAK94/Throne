@@ -449,7 +449,8 @@ namespace Configs {
         GenerateServerless generateServerlessReason(const std::shared_ptr<Profile> &profile) {
             if (profile == nullptr || profile->outbound == nullptr) return GenerateServerless::Missing;
             const auto &type = profile->type;
-            if (type == "chain" || type == "custom" || type == "extracore" || type == "tailscale" ||
+            const bool rawMihomo = type == "custom" && profile->Custom() != nullptr && profile->Custom()->IsMihomo();
+            if (type == "chain" || (type == "custom" && !rawMihomo) || type == "extracore" || type == "tailscale" ||
                 type == "autoselector" || type == "direct" || profile->outbound->IsExtraCore() ||
                 profile->outbound->IsXrayFullConfig())
                 return GenerateServerless::NoServer;

@@ -28,6 +28,13 @@ Throne's existing native and Xray support. This does not promise every protocol
 that could exist, and UDP is only enabled when the imported profile enables it.
 Raw Mihomo profiles use the existing custom outbound JSON editor.
 
+When an imported Mihomo profile does not enable UDP, the generated remote UDP
+DNS server is switched to TCP at the same resolver address and port. Incoming
+UDP DNS queries (including TUN DNS hijacking) still work through that TCP path.
+DNS rules and the proxy detour remain owned by sing-box; no direct fallback is
+introduced. This does not enable general UDP traffic on a TCP-only profile.
+A manually supplied raw DNS object is used unchanged.
+
 ## Verification
 
 Run the existing Windows core build tags and the routing tests:
@@ -52,3 +59,9 @@ private JSON subscription file outside the checkout and run
 `go test -v ./internal/boxmain -run TestMihomoSubscription`. The test uses each
 Mihomo outbound directly, with no direct fallback. Never commit that file or
 its credentials. `THRONE_MIHOMO_TEST_URL` can override the HTTPS test endpoint.
+
+Run `python tests/mihomo_dns_windows.py --gui build/Throne.exe --core-dir deployment/windows-amd64`
+to check real GUI DNS hijacking against local DNS and SOCKS servers. It verifies
+TCP upstream DNS through a UDP-disabled Mihomo profile
+and preserves UDP DNS through a UDP-enabled profile at the same resolver port.
+The test never enables TUN or changes the system proxy.

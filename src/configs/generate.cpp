@@ -970,6 +970,16 @@ namespace Configs {
                 if (ctx.proxyUsesXray && ( remoteDnsObj.value("type").toString() == "udp" || remoteDnsObj.value("type").toString() == "quic" )) {
                     remoteDnsObj = buildDnsObj(ctx, upgradeUdpDnsToDoH(remoteDnsObj.value("server").toString()));
                 }
+                // A TCP-only Mihomo path cannot carry UDP DNS. Use DNS over TCP
+                // at the same resolver/port; DNS rules and the proxy detour stay intact.
+                const bool tcpOnlyMihomo = std::any_of(ctx.outbounds.cbegin(), ctx.outbounds.cend(), [](const QJsonValue &value) {
+                    const auto object = value.toObject();
+                    return object.value("type").toString() == "mihomo"
+                           && !object.value("proxy").toObject().value("udp").toBool();
+                });
+                if (tcpOnlyMihomo && remoteDnsObj.value("type").toString() == "udp") {
+                    remoteDnsObj["type"] = "tcp";
+                }
                 remoteDnsObj["tag"] = tags::dnsRemote;
                 remoteDnsObj["domain_resolver"] = tags::dnsLocal;
                 remoteDnsObj["detour"] = tags::proxy;

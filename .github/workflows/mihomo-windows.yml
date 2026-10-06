@@ -77,6 +77,8 @@ jobs:
           ctest --test-dir build --output-on-failure
       - name: Test GUI subscription HTTP requests
         run: python tests/mihomo_subscription_windows.py --gui build/Throne.exe --core-dir deployment/windows-amd64
+      - name: Test GUI DNS through TCP-only proxy
+        run: python tests/mihomo_dns_windows.py --gui build/Throne.exe --core-dir deployment/windows-amd64
       - name: Package preview
         run: |
           Copy-Item build/Throne.exe deployment/windows-amd64/

@@ -1,8 +1,29 @@
-# Throne
+# Throne — Mihomo fork
 
-Qt based Desktop cross-platform GUI proxy utility, empowered by [Sing-box](https://github.com/SagerNet/sing-box)
+Неофициальный форк [throneproj/Throne](https://github.com/throneproj/Throne) с дополнительной поддержкой протоколов через **Mihomo v1.19.32**. Сохраняет привычный интерфейс Throne: маршрутизацией, DNS, TUN и цепочками управляет sing-box, а встроенные адаптеры Mihomo подключаются к прокси внутри ThroneCore.
 
-Supports Windows 11/10/8/7 / Linux / MacOS out of the box.
+### Что добавлено в форке
+
+- Импорт Clash/Mihomo подписок в JSON и YAML с сохранением параметров прокси.
+- Дополнительные варианты протоколов и транспортов: VLESS XHTTP, Hysteria2 Gecko, ShadowQUIC, Sudoku и другие адаптеры включённой версии Mihomo.
+- Исправлен запрос полного формата подписки и перенос существующих профилей при смене формата.
+- DNS через TCP для профилей Mihomo с отключённым UDP, включая запросы из TUN.
+
+Правила и группы из подписки не заменяют маршрутизацию Throne. Доступность UDP зависит от параметров профиля и сервера. Подробности: [Mihomo support](docs/mihomo.md).
+
+### Скачать и запустить
+
+**[Релизы этого форка](https://github.com/K0LLIAK94/Throne/releases/latest)** — portable ZIP для Windows x64.
+
+1. Распакуйте архив целиком в отдельную папку.
+2. Запустите `Throne.exe`; `ThroneCore.exe` и `libcronet.dll` должны лежать рядом.
+3. Добавьте подписку обычным способом. Если её список неполный, проверьте заданный вручную User-Agent в настройках приложения и группы.
+
+Для переноса настроек закройте старый Throne и скопируйте его папку `config` в новую папку программы, сохранив резервную копию. Архив релиза содержит только программу и документацию.
+
+Исходный проект поддерживает Windows, Linux и macOS. В этом форке сейчас опубликована сборка Windows x64; инструкции для других платформ ниже относятся к исходному Throne.
+
+Qt based Desktop cross-platform GUI proxy utility, powered by [sing-box](https://github.com/SagerNet/sing-box) and [Mihomo](https://github.com/MetaCubeX/mihomo).
 
 <img width="1002" height="789" alt="image" src="https://github.com/user-attachments/assets/af4a8e32-7e55-430c-9402-ec2d665cf71a" />
 
@@ -11,9 +32,9 @@ Apple platforms have a very strict security policy and since Throne does not hav
 
 ### GitHub Releases (Portable ZIP)
 
-[![GitHub All Releases](https://img.shields.io/github/downloads/throneproj/Throne/total?label=downloads-total&logo=github&style=flat-square)](https://github.com/throneproj/Throne/releases)
+[![GitHub All Releases](https://img.shields.io/github/downloads/K0LLIAK94/Throne/total?label=downloads-total&logo=github&style=flat-square)](https://github.com/K0LLIAK94/Throne/releases)
 
-# Linux CLI installer
+# Upstream Linux CLI installer
 ```bash
 curl -fsSL https://raw.githubusercontent.com/throneproj/Throne/dev/script/install_linux.py | sudo python3
 ```
@@ -52,12 +73,14 @@ curl -fsSL https://raw.githubusercontent.com/throneproj/Throne/dev/script/instal
 
 ## Subscription Formats
 
-Various formats are supported, including share links, various JSON representation of Sing-box configs, and v2rayN link format as well as limited support for Shadowsocks and Clash formats.
+Various formats are supported, including share links, JSON representations of sing-box configs, v2rayN links, and Clash/Mihomo JSON and YAML subscriptions. This fork retains complete Mihomo proxy definitions; subscription rules and proxy groups do not replace Throne's routing configuration.
 
 Deeplinks are also supported, read the [documentation](https://throneproj.github.io/advanced/deeplinks/) for more information.
 
 ## Credits
 
+- [throneproj/Throne](https://github.com/throneproj/Throne) — original project
+- [MetaCubeX/mihomo](https://github.com/MetaCubeX/mihomo)
 - [SagerNet/sing-box](https://github.com/SagerNet/sing-box)
 - [XTLS/Xray-core](https://github.com/xtls/xray-core)
 - [Qv2ray](https://github.com/Qv2ray/Qv2ray)

@@ -6,6 +6,8 @@ import (
 	"os/user"
 	"strconv"
 
+	"ThroneCore/internal/mihomo"
+
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/include"
@@ -37,6 +39,8 @@ func newBoxContext() context.Context {
 		ctx = filemanager.WithDefault(ctx, "", "", ownerUID, ownerGID)
 	}
 	ctx = service.ContextWith(ctx, deprecated.NewStderrManager(log.StdLogger()))
-	ctx = box.Context(ctx, include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry(), include.DNSTransportRegistry(), include.ServiceRegistry(), include.CertificateProviderRegistry())
+	outbounds := include.OutboundRegistry()
+	mihomo.Register(outbounds)
+	ctx = box.Context(ctx, include.InboundRegistry(), outbounds, include.EndpointRegistry(), include.DNSTransportRegistry(), include.ServiceRegistry(), include.CertificateProviderRegistry())
 	return ctx
 }

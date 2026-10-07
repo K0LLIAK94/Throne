@@ -449,7 +449,8 @@ namespace Configs {
         GenerateServerless generateServerlessReason(const std::shared_ptr<Profile> &profile) {
             if (profile == nullptr || profile->outbound == nullptr) return GenerateServerless::Missing;
             const auto &type = profile->type;
-            if (type == "chain" || type == "custom" || type == "extracore" || type == "tailscale" ||
+            const bool rawMihomo = type == "custom" && profile->Custom() != nullptr && profile->Custom()->IsMihomo();
+            if (type == "chain" || (type == "custom" && !rawMihomo) || type == "extracore" || type == "tailscale" ||
                 type == "autoselector" || type == "direct" || profile->outbound->IsExtraCore() ||
                 profile->outbound->IsXrayFullConfig())
                 return GenerateServerless::NoServer;
@@ -968,6 +969,16 @@ namespace Configs {
                 // overwrite remote dns to TCP based since Xray is shit
                 if (ctx.proxyUsesXray && ( remoteDnsObj.value("type").toString() == "udp" || remoteDnsObj.value("type").toString() == "quic" )) {
                     remoteDnsObj = buildDnsObj(ctx, upgradeUdpDnsToDoH(remoteDnsObj.value("server").toString()));
+                }
+                // A TCP-only Mihomo path cannot carry UDP DNS. Use DNS over TCP
+                // at the same resolver/port; DNS rules and the proxy detour stay intact.
+                const bool tcpOnlyMihomo = std::any_of(ctx.outbounds.cbegin(), ctx.outbounds.cend(), [](const QJsonValue &value) {
+                    const auto object = value.toObject();
+                    return object.value("type").toString() == "mihomo"
+                           && !object.value("proxy").toObject().value("udp").toBool();
+                });
+                if (tcpOnlyMihomo && remoteDnsObj.value("type").toString() == "udp") {
+                    remoteDnsObj["type"] = "tcp";
                 }
                 remoteDnsObj["tag"] = tags::dnsRemote;
                 remoteDnsObj["domain_resolver"] = tags::dnsLocal;

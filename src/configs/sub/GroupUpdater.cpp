@@ -34,8 +34,53 @@ namespace Subscription {
             return digest(QJsonDocument(ent.outbound->ExportToJson()).toJson(QJsonDocument::Compact));
         }
 
+        QByteArray nativeIdentityKeyOf(const Configs::Profile &ent) {
+            const Configs::Profile *identityProfile = &ent;
+            std::shared_ptr<Configs::Profile> equivalent;
+            if (ent.type == "xrayvless") {
+                const auto object = ent.outbound->ExportToJson();
+                const auto encryption = object["settings"].toObject()["encryption"].toString();
+                const auto network = object["streamSettings"].toObject()["network"].toString();
+                const QStringList commonNetworks{"", "tcp", "raw", "grpc", "ws", "http", "httpupgrade"};
+                if ((encryption.isEmpty() || encryption == "none") && commonNetworks.contains(network)) {
+                    // URI subscriptions can select Xray for the same ordinary VLESS
+                    // endpoint that Clash imports used to represent with sing-box.
+                    equivalent = Configs::ProfilesRepo::NewProfile("vless");
+                    if (equivalent->outbound->ParseFromLink(ent.outbound->ExportToLink())) {
+                        identityProfile = equivalent.get();
+                    }
+                }
+            }
+            auto identity = identityProfile->outbound->ExportIdentity();
+            auto tls = identity.value("tls").toObject();
+            // An omitted SNI and the default server name represent the same peer.
+            if (tls.value("server_name").toString().compare(identity.value("server").toString(), Qt::CaseInsensitive) == 0) {
+                tls.remove("server_name");
+            }
+            if (identityProfile->type == "anytls") {
+                // Providers may add a default fingerprint only in their Clash
+                // representation; it does not identify a different AnyTLS endpoint.
+                tls.remove("utls");
+            }
+            if (!tls.isEmpty()) identity["tls"] = tls;
+            return digest(identityProfile->type.toUtf8() + '|' + QJsonDocument(identity).toJson(QJsonDocument::Compact));
+        }
+
         QByteArray identityKeyOf(const Configs::Profile &ent) {
-            return digest(ent.type.toUtf8() + '|' + QJsonDocument(ent.outbound->ExportIdentity()).toJson(QJsonDocument::Compact));
+            if (ent.type == "custom") {
+                const auto custom = std::dynamic_pointer_cast<Configs::Custom>(ent.outbound);
+                if (custom != nullptr && custom->type == Configs::Custom::CustomOutbound) {
+                    const auto object = QString2QJsonObject(custom->config);
+                    if (object["type"].toString() == "mihomo") {
+                        if (const auto legacy = LegacyMihomoProfile(object["proxy"].toObject())) {
+                            // Keep IDs used by routing rules when a previously
+                            // native Clash profile becomes a Mihomo outbound.
+                            return nativeIdentityKeyOf(*legacy);
+                        }
+                    }
+                }
+            }
+            return nativeIdentityKeyOf(ent);
         }
 
         bool usableHeaderValue(const QString &value) {
@@ -828,7 +873,9 @@ namespace Subscription {
                 auto oldEnt = profilesRepo->GetProfile(oldId);
                 const auto newEnt = profilesRepo->GetProfile(newId);
                 if (oldEnt != nullptr && newEnt != nullptr) {
+                    oldEnt->type = newEnt->type;
                     oldEnt->outbound = newEnt->outbound;
+                    oldEnt->outbound->profile_id = oldId;
                     oldEnt->name = oldEnt->outbound->name;
                     profilesRepo->Save(oldEnt);
                 }

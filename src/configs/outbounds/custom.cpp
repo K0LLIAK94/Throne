@@ -20,6 +20,32 @@ namespace Configs
         SecurityInfo analyzeSingBoxOutbound(const QJsonObject& o)
         {
             const auto type = o["type"].toString();
+            if (type == "mihomo") {
+                const auto proxy = o["proxy"].toObject();
+                const auto protocol = proxy["type"].toString();
+                SecurityInfo info;
+                info.transport = DisplayTransportName(proxy["network"].toString());
+                if (!proxy["reality-opts"].toObject().isEmpty()) {
+                    info.label = QObject::tr("Reality");
+                    info.level = SecurityLevel::Secure;
+                } else if (proxy["tls"].toBool() || protocol == "trojan" || protocol == "anytls"
+                           || protocol == "hysteria" || protocol == "hysteria2" || protocol == "tuic"
+                           || protocol == "trusttunnel" || protocol == "shadowquic") {
+                    const bool insecure = proxy["skip-cert-verify"].toBool();
+                    const bool pinned = !proxy["fingerprint"].toString().isEmpty();
+                    info.label = insecure && !pinned ? QObject::tr("Insecure TLS") : QObject::tr("TLS");
+                    info.level = insecure && !pinned ? SecurityLevel::Weak : SecurityLevel::Secure;
+                } else if (protocol == "ss" || protocol == "ssr" || protocol == "snell"
+                           || protocol == "mieru" || protocol == "sudoku" || protocol == "wireguard"
+                           || protocol == "ssh" || (protocol == "vless" && IsVlessEncrypted(proxy["encryption"].toString()))) {
+                    info.label = QObject::tr("Encrypted");
+                    info.level = SecurityLevel::Secure;
+                } else {
+                    info.label = QObject::tr("Raw");
+                    info.level = SecurityLevel::None;
+                }
+                return WithPrivateServer(info, proxy["server"].toString());
+            }
             if (type.isEmpty() || type == "custom" || type == "selector" || type == "urltest"
                 || isSingBoxInfra(type))
                 return {};
@@ -32,6 +58,17 @@ namespace Configs
         QJsonObject singBoxOutboundIdentity(const QJsonObject& o)
         {
             const auto type = o["type"].toString();
+            if (type == "mihomo") {
+                const auto proxy = o["proxy"].toObject();
+                QJsonObject id{{"type", "mihomo"}};
+                // Renaming or rotating credentials during subscription updates
+                // must retain the profile ID referenced by routing rules.
+                for (const auto *key : {"type", "server", "port", "ports", "port-range", "network", "transport",
+                                       "sni", "servername", "flow", "version", "cipher", "obfs", "table-type"}) {
+                    if (proxy.contains(key)) id[key] = proxy[key];
+                }
+                return id;
+            }
             if (type.isEmpty() || type == "custom" || type == "selector" || type == "urltest"
                 || isSingBoxInfra(type))
                 return {};

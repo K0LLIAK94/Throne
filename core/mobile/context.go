@@ -5,6 +5,7 @@ import (
 	"net/netip"
 	"os"
 
+	"ThroneCore/internal/mihomo"
 	"ThroneCore/internal/xray"
 
 	box "github.com/sagernet/sing-box"
@@ -39,7 +40,9 @@ func newBoxContext(platform PlatformInterface, platformInterface adapter.Platfor
 	}
 	ctx := context.Background()
 	ctx = filemanager.WithDefault(ctx, sWorkingPath, sTempPath, os.Getuid(), os.Getgid())
-	ctx = box.Context(ctx, include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry(), dnsRegistry, include.ServiceRegistry(), include.CertificateProviderRegistry())
+	outbounds := include.OutboundRegistry()
+	mihomo.Register(outbounds)
+	ctx = box.Context(ctx, include.InboundRegistry(), outbounds, include.EndpointRegistry(), dnsRegistry, include.ServiceRegistry(), include.CertificateProviderRegistry())
 	ctx = service.ContextWith[deprecated.Manager](ctx, deprecated.NewStderrManager(log.StdLogger()))
 	if platformInterface != nil {
 		ctx = service.ContextWith[adapter.PlatformInterface](ctx, platformInterface)

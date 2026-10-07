@@ -19,4 +19,8 @@ namespace Subscription {
     void ParseDocument(QByteArray body, const ParseSink &sink);
 
     void ParseText(const QString &text, const ParseSink &sink);
+
+    // Recreate only the old importer's identity when migrating an existing
+    // Clash profile. Runtime configuration always keeps the complete raw proxy.
+    std::shared_ptr<Configs::Profile> LegacyMihomoProfile(const QJsonObject &proxy);
 }

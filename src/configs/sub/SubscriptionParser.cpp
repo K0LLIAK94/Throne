@@ -3,6 +3,7 @@
 #include "include/configs/common/utils.h"
 #include "include/configs/sub/SubscriptionScan.hpp"
 #include "include/configs/sub/clash.hpp"
+#include "include/configs/sub/MihomoProxy.hpp"
 #include "include/configs/sub/vpnFileImport.hpp"
 #include "include/database/ProfilesRepo.h"
 #include "include/global/Utils.hpp"
@@ -79,15 +80,6 @@ namespace Subscription {
             for (const auto &p : kProtocols) {
                 for (const char *name : p.singbox) {
                     if (name != nullptr && type == QLatin1String(name)) return p.type;
-                }
-            }
-            return nullptr;
-        }
-
-        const char *typeForClash(const std::string &type) {
-            for (const auto &p : kProtocols) {
-                for (const char *name : p.clash) {
-                    if (name != nullptr && type == name) return p.type;
                 }
             }
             return nullptr;
@@ -273,6 +265,7 @@ namespace Subscription {
             void xray(const QJsonDocument &doc, XraySubType type);
             void sip008(const QJsonDocument &doc);
             void clash(std::string_view text);
+            void mihomoProxy(const QJsonObject &proxy);
             void wireguardFile(std::string_view text);
             void openVpnFile(std::string_view text);
             void openConnectProfile(std::string_view text);
@@ -331,6 +324,14 @@ namespace Subscription {
         }
 
         void Parser::json(const QJsonDocument &doc, std::string_view text) {
+            if (doc.isObject() && doc.object()["proxies"].isArray()) {
+                for (const auto &value : doc.object()["proxies"].toArray()) mihomoProxy(value.toObject());
+                return;
+            }
+            if (doc.isObject() && doc.object().contains("port") && doc.object().contains("server")) {
+                mihomoProxy(doc.object());
+                return;
+            }
             // Xray first: its configs share the "outbounds" wrapper with sing-box.
             const auto xrayType = getXraySubType(doc);
             if (xrayType == XraySubType::outboundObject) {
@@ -432,6 +433,19 @@ namespace Subscription {
             }
         }
 
+        void Parser::mihomoProxy(const QJsonObject &proxy) {
+            const auto wrapped = Mihomo::wrapProxy(proxy);
+            if (wrapped.isEmpty()) {
+                log(QObject::tr("Skipped an invalid or non-proxy Mihomo entry."));
+                return;
+            }
+            auto ent = Configs::ProfilesRepo::NewProfile("custom");
+            ent->Custom()->type = Configs::Custom::CustomOutbound;
+            ent->Custom()->name = proxy["name"].toString();
+            ent->Custom()->config = QJsonObject2QString(wrapped, false);
+            produce(ent);
+        }
+
         void Parser::clash(std::string_view text) {
             try {
                 const fkyaml::node root = fkyaml::node::deserialize(sanitizeClashYaml(text));
@@ -439,19 +453,12 @@ namespace Subscription {
                 const auto &proxies = root["proxies"];
                 if (!proxies.is_sequence()) return;
 
-                // One entry at a time: clash::Proxies is several KB even when empty.
                 for (const auto &node : proxies) {
-                    const auto out = node.get_value<clash::Proxies>();
-                    const char *profileType = typeForClash(out.type);
-                    if (profileType == nullptr) continue;
-                    ProfilePtr ent;
-                    if (out.type == "vless" && (out.network == "xhttp" || (!out.encryption.empty() && out.encryption != "none"))) {
-                        ent = Configs::ProfilesRepo::NewProfile("xrayvless");
-                    } else {
-                        ent = Configs::ProfilesRepo::NewProfile(profileType);
+                    try {
+                        mihomoProxy(Mihomo::yamlValue(node).toObject());
+                    } catch (const std::exception &) {
+                        log(QObject::tr("Skipped an invalid Mihomo proxy entry."));
                     }
-                    if (!ent->outbound->ParseFromClash(out)) continue;
-                    produce(ent);
                 }
             // fkYAML can throw beyond fkyaml::exception on hostile input (bad_alloc, length_error).
             } catch (const std::exception &ex) {
@@ -620,5 +627,27 @@ namespace Subscription {
 
     void ParseText(const QString &text, const ParseSink &sink) {
         ParseDocument(text.toUtf8(), sink);
+    }
+
+    std::shared_ptr<Configs::Profile> LegacyMihomoProfile(const QJsonObject &proxy) {
+        const auto rawType = proxy["type"].toString();
+        const char *profileType = nullptr;
+        for (const auto &protocol : kProtocols) {
+            for (const auto *name : protocol.clash) {
+                if (name != nullptr && rawType == QLatin1String(name)) profileType = protocol.type;
+            }
+        }
+        if (profileType == nullptr) return nullptr;
+        try {
+            const auto node = fkyaml::node::deserialize(QJsonDocument(proxy).toJson(QJsonDocument::Compact).toStdString());
+            const auto oldProxy = node.get_value<clash::Proxies>();
+            if (oldProxy.type == "vless" && (oldProxy.network == "xhttp" || (!oldProxy.encryption.empty() && oldProxy.encryption != "none"))) {
+                profileType = "xrayvless";
+            }
+            auto profile = Configs::ProfilesRepo::NewProfile(profileType);
+            return profile->outbound->ParseFromClash(oldProxy) ? profile : nullptr;
+        } catch (const std::exception &) {
+            return nullptr;
+        }
     }
 }
